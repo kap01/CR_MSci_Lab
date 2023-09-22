@@ -15,7 +15,7 @@ class udaq():
         self._CHANNELS = ['A', 'B', 'C', 'D','E', 'F', 'G', 'H']
 
         self._num_events = 0
-
+        self._combo_type = 2
         self._coupling = {'A': 'DC', 'B': 'DC', 'C': 'DC', 'D': 'DC','E': 'DC', 'F': 'DC', 'G': 'DC', 'H': 'DC'}
         self._polarity = {'A': 1, 'B': 1, 'C': 1, 'D': 1, 'E': 1, 'F': 1, 'G': 1, 'H': 1}
         self._is_enabled = {'A': False, 'B': False, 'C': False, 'D': False, 'E': False, 'F': False, 'G': False, 'H': False}
@@ -83,7 +83,7 @@ class udaq():
         self._run_time = config.getfloat('Run', 'Run Time')
         if config.has_option('Run','Number of Runs'):
             self._num_runs = config.getint('Run', 'Number of Runs')
-
+        self._combo_type = config.getint('Run', 'Trigger Combo Setting')
         self._pre_trigger_window = config.getfloat('Sampling',
                                                     'Pre-Trigger Window')
         self._post_trigger_window = config.getfloat('Sampling',
@@ -91,7 +91,7 @@ class udaq():
         self._timebase = config.getint('Sampling', 'Time Base')
         self._num_captures = config.getint('Sampling',
                                            'Captures Per Block')
-
+        
         for ch in self._CHANNELS:
             sec = 'Channel ' + ch
             self._is_enabled[ch] = sec in config.sections()
@@ -125,7 +125,7 @@ class udaq():
 
     def _set_triggers(self):
         self.scope.set_advanced_triggers(self._is_trigger_enabled,
-            self._trigger_type, self._trigger_direction, self._threshold, )
+            self._trigger_type, self._trigger_direction, self._threshold, self._combo_type)
 
     def _open_output_file(self):
         for x in Path(self._output_path).glob('*.csv'):
