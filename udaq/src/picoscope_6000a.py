@@ -22,6 +22,10 @@ from picosdk.PicoDeviceStructs import picoStruct as struct
 from picosdk.functions import assert_pico_ok
 from picosdk.constants import PICO_STATUS_LOOKUP
 
+from itertools import combinations
+from collections import defaultdict
+
+
 
 INPUT_RANGES = {
     0.01: 1,
@@ -221,7 +225,6 @@ class PicoScope6000A:
         list of captures) with unconverted ADC values.
 
         :param num_pre_samples: number of samples before the trigger
-        :param num_post_samples: number of samples after the trigger
         :param timebase: timebase setting (see programmers guide for reference)
         :param num_captures: number of captures to take
 
@@ -463,7 +466,7 @@ class PicoScope6000A:
             self._handle, is_enabled, channel, threshold, direction, delay,
             auto_trigger))
 
-    def set_advanced_triggers(self, is_enabled, type, direction, threshold):
+    def set_advanced_triggers(self, is_enabled, type, direction, threshold, combo_type=2):
         """Set advanced triggering. Individual channel conditions are combined
            in a logical OR.
 
@@ -476,18 +479,20 @@ class PicoScope6000A:
         The direction parameter can take values of 'ABOVE', 'BELOW', 'RISING',
         'FALLING' or 'RISING_OR_FALLING'.
         """
+        
+        trigChanEnabledList = []
         num_enabled = sum(list(is_enabled.values()))
         trigDirList = []
         trigPropList = []
         for ch in 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H':
-            if is_enabled[ch]:
+             if is_enabled[ch]:
                 channel = _get_channel_from_name(ch)
+                trigChanEnabledList.append(ch)
                 trig_dir = _get_trigger_direction_from_name(direction[ch])
                 trig_type = enums.PICO_THRESHOLD_MODE["PICO_LEVEL"]
                 trigDirList.append(struct.PICO_DIRECTION(channel, trig_dir, trig_type))
                 thresh = self._rescale_V_to_adc(ch, threshold[ch])
-                prop = struct.PICO_TRIGGER_CHANNEL_PROPERTIES(thresh,
-                    0, 0, 0, channel)
+                prop = struct.PICO_TRIGGER_CHANNEL_PROPERTIES(thresh,0, 0, 0, channel)
                 trigPropList.append(prop)
 
         Directions = struct.PICO_DIRECTION*num_enabled
@@ -503,26 +508,28 @@ class PicoScope6000A:
         assert_pico_ok(ps.ps6000aSetTriggerChannelProperties(self._handle,
             ctypes.byref(trigProperties), num_enabled, 0, autoTriggerMicroSeconds))
 
-        state_true = enums.PICO_TRIGGER_STATE["PICO_CONDITION_TRUE"]
+        # initialise trigger logic flags
         clear      = enums.PICO_ACTION["PICO_CLEAR_ALL"]
         add        = enums.PICO_ACTION["PICO_ADD"]
-        flag = clear + add
-
-        trigger_conditions = (struct.PICO_CONDITION * 2)()
-        trigger_conditions[0] = struct.PICO_CONDITION(_get_channel_from_name('A'), enums.PICO_TRIGGER_STATE["PICO_CONDITION_TRUE"])
-        trigger_conditions[1] = struct.PICO_CONDITION(_get_channel_from_name('B'), enums.PICO_TRIGGER_STATE["PICO_CONDITION_TRUE"])
-        n_trig_cond = 2
-        assert_pico_ok(ps.ps6000aSetTriggerChannelConditions(self._handle, ctypes.byref(trigger_conditions), 
-                                                                              n_trig_cond, clear+add))
-
-        ##for ch in 'A', 'B', 'C', 'D':
-        ##    if is_enabled[ch]:
-        ##        channel = _get_channel_from_name(ch)
-        ##        trigCondition = struct.PICO_CONDITION(channel, state_true)
-        ##        state = ps.ps6000aSetTriggerChannelConditions(self._handle,
-        ##            ctypes.byref(trigCondition), 1, flag)
-        ##        assert_pico_ok(state)
-        ##        flag = add
+        flag = clear 
+        state_true = enums.PICO_TRIGGER_STATE["PICO_CONDITION_TRUE"]
+        
+        # pick unique singles, doubles, triples...
+        combos = list(combinations(trigChanEnabledList,r=combo_type))
+        print("These are the trigger combinations that will be used \n", combos)
+       
+        for icombo, combo in enumerate(combos):
+            num_used = len(combo)
+            print("Processing trigger combination:", combo)
+            trigger_conditions = (struct.PICO_CONDITION * num_used)()
+            for ich, ch in enumerate(combo):
+                trigger_conditions[ich] = struct.PICO_CONDITION(_get_channel_from_name(ch), 
+                                                                enums.PICO_TRIGGER_STATE["PICO_CONDITION_TRUE"])
+            n_trig_cond = num_used    
+            assert_pico_ok(ps.ps6000aSetTriggerChannelConditions(self._handle, ctypes.byref(trigger_conditions), 
+                                                                 n_trig_cond, flag))
+            print("The flag is:",flag)
+            flag = add
 
     def _get_enabled_channels(self):
         """Return list of enabled channels."""
