@@ -19,7 +19,7 @@ import numpy as np
 from picosdk.ps6000a import ps6000a as ps
 from picosdk.PicoDeviceEnums import picoEnum as enums
 from picosdk.PicoDeviceStructs import picoStruct as struct
-from picosdk.functions import assert_pico_ok
+from picosdk.functions import assert_pico_ok, adc2mV
 from picosdk.constants import PICO_STATUS_LOOKUP
 
 from itertools import combinations
@@ -277,7 +277,6 @@ class PicoScope6000A:
                                                      np.array(values)))
             else:
                 V_data.append(None)
-
         return time_values, V_data
 
     def _calculate_time_values(self, timebase, num_samples):
@@ -287,7 +286,7 @@ class PicoScope6000A:
 
     def _rescale_adc_to_V(self, channel, data):
         """Rescale the ADC data and return float values in volts.
-
+ 
         :param channel: name of the channel
         :param data: the data to transform
         """
@@ -306,6 +305,7 @@ class PicoScope6000A:
         offset = self._input_offsets[channel]
         max_adc_value = self._input_adc_ranges[channel]
         output = max_adc_value * (data + offset) / voltage_range
+        print(data,output,max_adc_value,voltage_range)
         try:
             return output.astype(np.int16)
         except AttributeError:
@@ -377,7 +377,6 @@ class PicoScope6000A:
     def start_run(self, num_pre_samples, num_post_samples, timebase=4,
                   num_captures=1, callback=None):
         """Start a run in (rapid) block mode.
-
         Start a data collection run in 'rapid block mode' and collect a number
         of captures. Unlike the :method:`measure` and
         :method:`measure_adc_values`, which handle all details for you, this
@@ -400,7 +399,7 @@ class PicoScope6000A:
         self._num_samples = num_pre_samples + num_post_samples
         self._timebase = timebase
         self._num_captures = num_captures
-
+       
         # # if callback is None:
         # #     callback = self._callback
         # # self.data_is_ready.clear()
@@ -488,11 +487,12 @@ class PicoScope6000A:
              if is_enabled[ch]:
                 channel = _get_channel_from_name(ch)
                 trigChanEnabledList.append(ch)
+                print(direction[ch])
                 trig_dir = _get_trigger_direction_from_name(direction[ch])
                 trig_type = enums.PICO_THRESHOLD_MODE["PICO_LEVEL"]
                 trigDirList.append(struct.PICO_DIRECTION(channel, trig_dir, trig_type))
                 thresh = self._rescale_V_to_adc(ch, threshold[ch])
-                prop = struct.PICO_TRIGGER_CHANNEL_PROPERTIES(thresh,0, 0, 0, channel)
+                prop = struct.PICO_TRIGGER_CHANNEL_PROPERTIES(thresh,0, thresh, 0, channel)
                 trigPropList.append(prop)
 
         Directions = struct.PICO_DIRECTION*num_enabled
@@ -511,7 +511,7 @@ class PicoScope6000A:
         # initialise trigger logic flags
         clear      = enums.PICO_ACTION["PICO_CLEAR_ALL"]
         add        = enums.PICO_ACTION["PICO_ADD"]
-        flag = clear 
+        flag = clear+add 
         state_true = enums.PICO_TRIGGER_STATE["PICO_CONDITION_TRUE"]
         
         # pick unique singles, doubles, triples...
@@ -528,7 +528,6 @@ class PicoScope6000A:
             n_trig_cond = num_used    
             assert_pico_ok(ps.ps6000aSetTriggerChannelConditions(self._handle, ctypes.byref(trigger_conditions), 
                                                                  n_trig_cond, flag))
-            print("The flag is:",flag)
             flag = add
 
     def _get_enabled_channels(self):

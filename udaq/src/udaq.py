@@ -190,7 +190,7 @@ class udaq():
                     bl = channel_data[:, :bl_samples].mean(axis=1)
                 else:
                     bl = np.zeros(len(channel_data))
-                ph = (channel_data.max(axis=1) - bl)*1e3
+                ph = (channel_data.max(axis=1) - bl)
                 pulseheights.append(ph)
         times = np.array(times)
         return np.array(times), np.array(pulseheights)
