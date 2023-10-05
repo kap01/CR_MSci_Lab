@@ -269,6 +269,12 @@ class udaq():
             while(self.scope.wait_for_data() == 0):
                 self._elapsed_time = time.time() - self._t_start_run
                 if self._elapsed_time >= self._run_time:
+                    ##self._num_events += self._num_captures
+                    ##keys = ['x', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+                    ##x, [A, B, C, D, E, F, G, H] = self.scope.get_data()
+                    ##data = dict(zip(keys, [x, A, B, C, D, E, F, G, H]))
+                    ##times, pulseheights = self._process_data(data)
+                    ##self._write_output(times, pulseheights)
                     self._close_output_file()
                     self._write_info_file()
                     return 0

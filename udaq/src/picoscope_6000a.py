@@ -487,19 +487,12 @@ class PicoScope6000A:
              if is_enabled[ch]:
                 channel = _get_channel_from_name(ch)
                 trigChanEnabledList.append(ch)
-<<<<<<< HEAD
                 print(direction[ch])
-=======
->>>>>>> e6c84b7e1b89257d41ae9629e920791d3fc953e8
                 trig_dir = _get_trigger_direction_from_name(direction[ch])
                 trig_type = enums.PICO_THRESHOLD_MODE["PICO_LEVEL"]
                 trigDirList.append(struct.PICO_DIRECTION(channel, trig_dir, trig_type))
                 thresh = self._rescale_V_to_adc(ch, threshold[ch])
-<<<<<<< HEAD
-                prop = struct.PICO_TRIGGER_CHANNEL_PROPERTIES(thresh,0, thresh, 0, channel)
-=======
                 prop = struct.PICO_TRIGGER_CHANNEL_PROPERTIES(thresh,0, 0, 0, channel)
->>>>>>> e6c84b7e1b89257d41ae9629e920791d3fc953e8
                 trigPropList.append(prop)
 
         Directions = struct.PICO_DIRECTION*num_enabled
