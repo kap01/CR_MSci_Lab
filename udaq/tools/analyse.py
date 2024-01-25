@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 hep.style.use('LHCb2')
 
-df = pd.read_csv('C:/Users/kp14102/CR_MSci_Lab/Run0011.csv')
-
+df = pd.read_csv('C:/Users/hq21095/picosdk-python-wrappers-master/picosdk-python-wrappers-master/CR_MSci_Lab/Run0001.csv')
 for ch in ['A','B','C','D','E','F','G','H']:
     h, bins = np.histogram(df[f'pulse_height_{ch}'],range=[0,1],bins=100)
     hep.histplot(h,bins,yerr=np.sqrt(h),histtype='step',label=f'Channel {ch}')
